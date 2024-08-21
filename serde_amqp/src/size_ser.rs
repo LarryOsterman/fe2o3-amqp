@@ -8,7 +8,7 @@ use crate::{
         ARRAY, DECIMAL128, DECIMAL32, DECIMAL64, DESCRIBED_BASIC, DESCRIBED_LIST, DESCRIBED_MAP,
         DESCRIPTOR, SYMBOL, SYMBOL_REF, TIMESTAMP, TRANSPARENT_VEC, UUID,
     },
-    ser::{U32_MAX_MINUS_4, U8_MAX, U8_MAX_MINUS_1},
+    ser::{U32_MAX, U8_MAX, U8_MAX_MINUS_1, U8_MAX_PLUS_1},
     util::{FieldRole, IsArrayElement, NewType, StructEncoding},
 };
 
@@ -206,19 +206,19 @@ impl<'a> ser::Serializer for &'a mut SizeSerializer {
         match self.is_array_element {
             IsArrayElement::False => match self.new_type {
                 NewType::Symbol | NewType::SymbolRef => match v.len() {
-                    0..=U8_MAX_MINUS_1 => {
+                    0..=U8_MAX => {
                         self.new_type = NewType::None;
                         Ok(2 + v.len())
                     }
-                    U8_MAX..=U32_MAX_MINUS_4 => {
+                    U8_MAX_PLUS_1..=U32_MAX => {
                         self.new_type = NewType::None;
                         Ok(5 + v.len())
                     }
                     _ => Err(Error::too_long()),
                 },
                 NewType::None => match v.len() {
-                    0..=U8_MAX_MINUS_1 => Ok(2 + v.len()),
-                    U8_MAX..=U32_MAX_MINUS_4 => Ok(5 + v.len()),
+                    0..=U8_MAX => Ok(2 + v.len()),
+                    U8_MAX_PLUS_1..=U32_MAX => Ok(5 + v.len()),
                     _ => Err(Error::too_long()),
                 },
                 _ => unreachable!(),
@@ -239,8 +239,8 @@ impl<'a> ser::Serializer for &'a mut SizeSerializer {
         match self.new_type {
             NewType::None => match self.is_array_element {
                 IsArrayElement::False => match l {
-                    0..=U8_MAX_MINUS_1 => Ok(2 + l),
-                    U8_MAX..=U32_MAX_MINUS_4 => Ok(5 + l),
+                    0..=U8_MAX => Ok(2 + l),
+                    U8_MAX_PLUS_1..=U32_MAX => Ok(5 + l),
                     _ => Err(Error::too_long()),
                 },
                 IsArrayElement::FirstElement => Ok(5 + l),
@@ -503,12 +503,12 @@ impl<'a> ser::SerializeSeq for SeqSerializer<'a> {
 fn list_size(len: usize, is_array_element: &IsArrayElement) -> Result<usize, usize> {
     match len {
         0 => Ok(1),
-        1..=U8_MAX_MINUS_1 => match is_array_element {
+        1..=U8_MAX => match is_array_element {
             IsArrayElement::False => Ok(1 + 2 + len),
             IsArrayElement::FirstElement => Ok(1 + 2 + len),
             IsArrayElement::OtherElement => Ok(2 + len),
         },
-        U8_MAX..=U32_MAX_MINUS_4 => match is_array_element {
+        U8_MAX_PLUS_1..=U32_MAX => match is_array_element {
             IsArrayElement::False => Ok(1 + 4 + 4 + len),
             IsArrayElement::FirstElement => Ok(1 + 4 + 4 + len),
             IsArrayElement::OtherElement => Ok(4 + 4 + len),
@@ -524,7 +524,7 @@ fn array_size(len: usize, is_array_element: &IsArrayElement) -> Result<usize, us
             IsArrayElement::FirstElement => 1 + 2 + len,
             IsArrayElement::OtherElement => 2 + len,
         },
-        U8_MAX..=U32_MAX_MINUS_4 => match is_array_element {
+        U8_MAX..=U32_MAX => match is_array_element {
             IsArrayElement::False => 1 + 4 + 4 + len,
             IsArrayElement::FirstElement => 1 + 4 + 4 + len,
             IsArrayElement::OtherElement => 4 + 4 + len,
@@ -629,12 +629,12 @@ impl<'a> ser::SerializeMap for MapSerializer<'a> {
 
 fn map_size(len: usize, is_array_element: &IsArrayElement) -> Result<usize, usize> {
     match len {
-        0..=U8_MAX_MINUS_1 => match is_array_element {
+        0..=U8_MAX => match is_array_element {
             IsArrayElement::False => Ok(1 + 2 + len),
             IsArrayElement::FirstElement => Ok(1 + 2 + len),
             IsArrayElement::OtherElement => Ok(2 + len),
         },
-        U8_MAX..=U32_MAX_MINUS_4 => match is_array_element {
+        U8_MAX_PLUS_1..=U32_MAX => match is_array_element {
             IsArrayElement::False => Ok(1 + 4 + 4 + len),
             IsArrayElement::FirstElement => Ok(1 + 4 + 4 + len),
             IsArrayElement::OtherElement => Ok(4 + 4 + len),
